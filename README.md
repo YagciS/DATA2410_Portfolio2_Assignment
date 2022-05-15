@@ -13,7 +13,7 @@ All VM's will run Ubuntu 20.4 with network bridge enabled (default is NAT)
  - *Second VM* is going to run Zabbix Proxy with MariaDB 10.6 and Nginx Proxy
  - *Last VM* will run a Zabbix Agent with PSK encryption
 
-How to **install** and run this project will be detailed in each directory.
+How to **install** and recreate this project will be detailed in each directory.
 
 [Offical Zabbix website](https://www.zabbix.com "Zabbix's Homepage")
 
