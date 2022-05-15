@@ -1,0 +1,109 @@
+---
+version: "2.4"
+
+networks:
+  network-zabbix:
+    driver: bridge
+    ipam:
+      config:
+       - subnet: 172.29.0.0/28
+         gateway: 172.29.0.1
+
+volumes:
+   mysql-server:
+     driver: local
+   zabbix-server:
+     driver: local
+   zabbix-web-nginx-mysql:
+     driver: local
+   zabbix-agent:
+     driver: local
+
+
+services:
+
+  mysql-server:
+    image: "haakco/mysql80"
+    container_name: mysql-server
+    hostname: mysql-server
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+    networks:
+      network-zabbix:
+        ipv4_address: 172.29.0.2
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql-server:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=123
+      - MYSQL_DATABASE=zabbix
+      - MYSQL_USER=zabbix
+      - MYSQL_PASSWORD=123
+    cap_add:
+     - SYS_NICE
+    restart:
+      unless-stopped
+
+
+  zabbix-server:
+    image: "zabbix/zabbix-server-mysql"
+    container_name: zabbix-server
+    hostname: zabbix-server
+    networks:
+      network-zabbix:
+        ipv4_address: 172.29.0.3
+    ports:
+      - 10051:10051
+    volumes:
+      - zabbix-server:/etc/zabbix
+    environment:
+      - DB_SERVER_HOST=mysql-server
+      - MYSQL_DATABASE=zabbix
+      - MYSQL_USER=zabbix
+      - MYSQL_PASSWORD=123
+    restart:
+      unless-stopped
+    depends_on:
+      - mysql-server
+
+  zabbix-web-nginx-mysql:
+    image: zabbix/zabbix-web-nginx-mysql
+    hostname: zabbix-web
+    container_name: zabbix-web
+    networks:
+     network-zabbix:
+       ipv4_address: 172.29.0.4
+    ports:
+     - 80:8080
+    volumes:
+     - zabbix-web-nginx-mysql:/etc/zabbix/
+    environment:
+     - DB_SERVER_HOST=mysql-server
+     - MYSQL_ROOT_PASSWORD=123
+     - MYSQL_DATABASE=zabbix
+     - MYSQL_USER=zabbix
+     - MYSQL_PASSWORD=123
+     - ZBX_SERVER_HOST=172.29.0.3
+    cap_add:
+     - SYS_NICE
+    restart: unless-stopped
+    depends_on:
+     -  "mysql-server"
+     -  "zabbix-server"
+
+  zabbix-agent:
+    image: zabbix/zabbix-agent
+    container_name: zabbix-agent
+    hostname: zabbix-agent
+    networks:
+     network-zabbix:
+       ipv4_address: 172.29.0.5
+    ports:
+      - 10050:10050
+    volumes:
+      - zabbix-agent:/etc/zabbix
+    environment:
+      - ZBX_HOSTNAME=Zabbix server
+      - ZBX_SERVER_HOST=172.29.0.3
+    depends_on:
+      - "zabbix-server"
